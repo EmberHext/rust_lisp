@@ -1,6 +1,9 @@
 use nom::{
     branch::alt,
-    bytes::complete::tag,
+    bytes::complete::{
+        tag,
+        take_until,
+    },
     character::complete::{
         alpha1,
         char,
@@ -53,6 +56,8 @@ pub fn parse_atom(input: &str) -> IResult<&str, Atom, VerboseError<&str>> {
         "atom",
         alt((
             map(parse_integer, Atom::Int),
+            map(parse_char, Atom::Char),
+            map(parse_string, Atom::String),
             map(parse_key, Atom::Key),
             map(parse_boolean, Atom::Boolean),
             map(parse_instructions, Atom::Instructions),
@@ -64,6 +69,40 @@ pub fn parse_integer(input: &str) -> IResult<&str, i32, VerboseError<&str>> {
     context(
         "integer",
         map_res(digit1, |s: &str| s.parse::<i32>()),
+    )(input)
+}
+
+pub fn parse_char(input: &str) -> IResult<&str, char, VerboseError<&str>> {
+    context(
+        "char",
+        map_res(
+            preceded(
+                char('\''),
+                terminated(one_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"), char('\'')),
+            ),
+            |s: char| -> Result<char, VerboseError<&str>> { Ok(s) },
+        ),
+    )(input)
+}
+
+
+pub fn parse_string(input: &str) -> IResult<&str, String, VerboseError<&str>> {
+    context(
+        "string",
+        map_res(
+            delimited(char('"'), take_until("\""), char('"')),
+            |s: &str| {
+                s.chars()
+                    .map(|c| {
+                        if c == '\\' {
+                            Err("String literals with escaped characters are not supported.")
+                        } else {
+                            Ok(c)
+                        }
+                    })
+                    .collect::<Result<String, _>>()
+            },
+        ),
     )(input)
 }
 

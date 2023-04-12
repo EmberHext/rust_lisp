@@ -19,6 +19,8 @@ pub enum Atom {
     Key(String),
     Boolean(bool),
     Instructions(Instructions),
+    Char(char),
+    String(String),
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
