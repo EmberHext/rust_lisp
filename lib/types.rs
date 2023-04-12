@@ -10,6 +10,7 @@ pub enum Instructions {
     Divide,
     Equal,
     Not,
+    Define,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]

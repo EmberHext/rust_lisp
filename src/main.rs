@@ -42,4 +42,23 @@ fn main() {
         Ok(result) => println!("Evaluated result: {:?}", result),
         Err(error) => println!("Error: {}", error),
     }
+
+    let input = "(define x 42)";
+    let (_, parsed_expr) = parse_expr(input).unwrap();
+    println!("Parsed expression: {:?}", parsed_expr);
+
+    let mut env = Environment::new();
+    match eval(&parsed_expr, &mut env) {
+        Ok(result) => println!("Evaluated result: {:?}", result),
+        Err(error) => println!("Error: {}", error),
+    }
+
+    let input = "x";
+    let (_, parsed_expr) = parse_expr(input).unwrap();
+    println!("Parsed expression: {:?}", parsed_expr);
+
+    match eval(&parsed_expr, &mut env) {
+        Ok(result) => println!("Evaluated result: {:?}", result),
+        Err(error) => println!("Error: {}", error),
+    }
 }

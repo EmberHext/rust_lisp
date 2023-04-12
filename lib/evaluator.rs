@@ -69,22 +69,51 @@ fn eval_divide(evaluated_operands: Vec<Atom>) -> Result<Atom, String> {
     Ok(Atom::Int(result))
 }
 
+fn eval_variable_assignment(operands: &[Expr], env: &mut Environment) -> Result<Atom, String> {
+    if operands.len() == 2 {
+        if let Expr::Constant(Atom::Key(ref name)) = operands[0] {
+            let value = eval(&operands[1], env)?;
+            env.insert(name.clone(), value.clone());
+            Ok(Atom::Key(name.clone()))
+        } else {
+            Err("The first operand of 'define' should be a variable name.".to_string())
+        }
+    } else {
+        Err("The 'define' instruction requires exactly two operands: a variable name and its value.".to_string())
+    }
+}
+
+
+fn eval_variable_lookup(atom: &Atom, env: &Environment) -> Result<Atom, String> {
+    match atom {
+        Atom::Key(ref name) => env
+            .get(name)
+            .cloned()
+            .ok_or_else(|| format!("Undefined variable: {}", name)),
+        _ => Ok(atom.clone()),
+    }
+}
+
 pub fn eval(expr: &Expr, env: &mut Environment) -> Result<Atom, String> {
     match expr {
-        Expr::Constant(atom) => Ok(atom.clone()),
+        Expr::Constant(atom) => eval_variable_lookup(atom, env),
         Expr::Application(operator, operands) => {
-            if let Expr::Constant(Atom::Instructions(instruction)) = **operator {
-                let evaluated_operands: Result<Vec<Atom>, String> =
-                    operands.iter().map(|operand| eval(operand, env)).collect();
-                match instruction {
-                    Instructions::Plus => eval_plus(evaluated_operands?),
-                    Instructions::Minus => eval_minus(evaluated_operands?),
-                    Instructions::Multiply => eval_multiply(evaluated_operands?),
-                    Instructions::Divide => eval_divide(evaluated_operands?),
-                    _ => Err("Unsupported instruction.".to_string()),
+            match **operator {
+                Expr::Constant(Atom::Instructions(instruction)) => {
+                    let evaluated_operands: Result<Vec<Atom>, String> =
+                        operands.iter().map(|operand| eval(operand, env)).collect();
+                    match instruction {
+                        Instructions::Plus => eval_plus(evaluated_operands?),
+                        Instructions::Minus => eval_minus(evaluated_operands?),
+                        Instructions::Multiply => eval_multiply(evaluated_operands?),
+                        Instructions::Divide => eval_divide(evaluated_operands?),
+                        _ => Err("Unsupported instruction.".to_string()),
+                    }
                 }
-            } else {
-                Err("Expected an instruction as the operator.".to_string())
+                Expr::Constant(Atom::Key(ref keyword)) if keyword == "define" => {
+                    eval_variable_assignment(operands, env)
+                }
+                _ => Err("Expected an instruction or a keyword as the operator.".to_string()),
             }
         }
         _ => Err("Unsupported expression.".to_string()),
